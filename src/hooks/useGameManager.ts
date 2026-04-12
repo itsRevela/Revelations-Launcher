@@ -199,7 +199,7 @@ export function useGameManager({ profile, setProfile, customEditions, setCustomE
         try {
           const dataUrl = await TauriService.getInstanceTitleImage(edition.id);
           if (edition.titleImage !== dataUrl) {
-            setCustomEditions(prev => prev.map((e) =>
+            setCustomEditions(customEditions.map((e: any) =>
               e.id === edition.id ? { ...e, titleImage: dataUrl } : e
             ));
           }
