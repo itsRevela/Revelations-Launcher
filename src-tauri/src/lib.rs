@@ -824,7 +824,7 @@ async fn setup_macos_runtime(window: tauri::Window, app: AppHandle) -> Result<()
 }
 
 /// Build a LCE skin pack (.pck) with info asset and a single skin PNG.
-fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool) -> Vec<u8> {
+fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool, uid: &str) -> Vec<u8> {
     let mut buf = Vec::new();
 
     fn w32(buf: &mut Vec<u8>, v: u32) { buf.extend_from_slice(&v.to_le_bytes()); }
@@ -879,10 +879,9 @@ fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool) -> Vec<u8>
     // File header 1: skin PNG
     w32(&mut buf, skin_png.len() as u32);
     w32(&mut buf, 0); // type 0 = SkinFile
-    let skin_id = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() % 100_000_000;
+    // Derive a stable 8-digit skin ID from the player's UID
+    let uid_trimmed = uid.trim().trim_start_matches("0x");
+    let skin_id = u64::from_str_radix(uid_trimmed, 16).unwrap_or(99990000) % 100_000_000;
     let skin_filename = format!("dlcskin{:08}.png", skin_id);
     wstr(&mut buf, &skin_filename);
 
@@ -1292,7 +1291,8 @@ async fn launch_game(app: AppHandle, state: State<'_, GameState>, instance_id: S
         if let Ok(bytes) = general_purpose::STANDARD.decode(base64_str) {
             let display_name = &username;
             let is_alex = config.skin_model.as_deref() == Some("alex");
-            let pck_data = build_skin_pck(&bytes, display_name, is_alex);
+            let uid = fs::read_to_string(instance_dir.join("uid.dat")).unwrap_or_default();
+            let pck_data = build_skin_pck(&bytes, display_name, is_alex, &uid);
             let custom_skins_dir = instance_dir.join("Windows64Media").join("DLC").join("Custom Skins");
             let _ = fs::create_dir_all(&custom_skins_dir);
             let _ = fs::write(custom_skins_dir.join("Skins.pck"), pck_data);
