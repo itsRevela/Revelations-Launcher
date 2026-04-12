@@ -13,15 +13,18 @@ export function useSkinSync() {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          // Export as 64x32 for PCK (crop top half of 64x64 skins)
+          // Always 64x32 for PCK (LCE crashes on 64x64)
           const cvs = document.createElement("canvas");
           cvs.width = 64;
           cvs.height = 32;
           const ctx = cvs.getContext("2d");
           if (ctx) {
             ctx.imageSmoothingEnabled = false;
-            const srcH = img.naturalHeight > 32 ? img.naturalHeight / 2 : img.naturalHeight;
-            ctx.drawImage(img, 0, 0, img.naturalWidth, srcH, 0, 0, 64, 32);
+            if (img.naturalHeight > 32) {
+              ctx.drawImage(img, 0, 0, 64, 32, 0, 0, 64, 32);
+            } else {
+              ctx.drawImage(img, 0, 0);
+            }
             setSkinBase64(cvs.toDataURL("image/png"));
           }
         };

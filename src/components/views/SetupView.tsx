@@ -60,7 +60,6 @@ const SetupView: React.FC<SetupViewProps> = ({ onComplete }) => {
       checkMacOSRuntime();
 
       const unlisten = TauriService.onMacosProgress((progress) => {
-        console.log("[macOS Setup Progress]", progress);
         setSetupProgress(progress);
       });
 
@@ -75,25 +74,21 @@ const SetupView: React.FC<SetupViewProps> = ({ onComplete }) => {
       const localStorageInstalled = localStorage.getItem('lce-macos-runtime-installed') === 'true';
 
       if (localStorageInstalled) {
-        console.log("[macOS Runtime] Using cached installation status");
         try {
           const runtimeCheck = await TauriService.checkMacOSRuntimeInstalledFast();
           if (runtimeCheck) {
             setRuntimeAlreadyInstalled(true);
             return;
           } else {
-            console.log("[macOS Runtime] Cache was wrong, clearing");
             localStorage.removeItem('lce-macos-runtime-installed');
             setRuntimeAlreadyInstalled(false);
             return;
           }
         } catch (error) {
-          console.log("[macOS Runtime] Fast check failed, using cache");
           setRuntimeAlreadyInstalled(true);
           return;
         }
       } else {
-        console.log("[macOS Runtime] No installation detected");
         setRuntimeAlreadyInstalled(false);
       }
     } catch (error) {
@@ -202,9 +197,7 @@ const SetupView: React.FC<SetupViewProps> = ({ onComplete }) => {
     setSetupProgress({ stage: "preparing", message: "Preparing macOS runtime setup...", percent: 0 });
 
     try {
-      console.log("[macOS Setup] Starting runtime installation...");
       await TauriService.setupMacosRuntime();
-      console.log("[macOS Setup] Runtime installation completed successfully!");
       setSetupProgress({ stage: "completed", message: "Setup completed successfully!", percent: 100 });
 
       localStorage.setItem('lce-macos-runtime-installed', 'true');

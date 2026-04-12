@@ -40,7 +40,7 @@ function SkinThumbnail({ url }: { url: string }) {
 const SkinsView = memo(function SkinsView() {
   const { setActiveView } = useUI();
   const { playClickSound, playBackSound } = useAudio();
-  const { skinUrl, setSkinUrl, setSkinModel } = useSkin();
+  const { skinUrl, setSkinUrl, skinModel, setSkinModel } = useSkin();
 
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ const SkinsView = memo(function SkinsView() {
   const [storedSkins, setStoredSkins] = useLocalStorage<SavedSkin[]>('lce-custom-skins', []);
   const savedSkins = [...DEFAULT_SKINS, ...storedSkins.filter(s => !DEFAULT_SKINS.some(d => d.id === s.id))];
 
-  const TOP_BUTTONS_COUNT = 3; // Import, Delete, Folder
+  const TOP_BUTTONS_COUNT = 4; // Import, Delete, Model Toggle, Folder
   const SKINS_START_INDEX = TOP_BUTTONS_COUNT;
   const BACK_BUTTON_INDEX = SKINS_START_INDEX + savedSkins.length;
   const ITEM_COUNT = BACK_BUTTON_INDEX + 1;
@@ -86,19 +86,12 @@ const SkinsView = memo(function SkinsView() {
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(img, 0, 0, targetW, targetH);
 
-        // Detect Alex (slim) skin via pixel (42, 48) transparency
-        let model: 'steve' | 'alex' = 'steve';
-        if (targetH === 64) {
-          const pixel = ctx.getImageData(42, 48, 1, 1).data;
-          if (pixel[3] === 0) model = 'alex';
-        }
-
         const base64String = cvs.toDataURL("image/png");
         const newId = Date.now().toString();
-        const newSkin: SavedSkin = { id: newId, name: defaultName, url: base64String, model };
+        const newSkin: SavedSkin = { id: newId, name: defaultName, url: base64String, model: 'steve' };
         setSavedSkins(prev => [...prev, newSkin]);
         setSkinUrl(base64String);
-        setSkinModel(model);
+        setSkinModel('steve');
         setActiveSkinId(newId);
 
         // Save to skins folder on disk
@@ -207,7 +200,8 @@ const SkinsView = memo(function SkinsView() {
       } else if (e.key === 'Enter' && focusIndex !== null) {
         if (focusIndex === 0) handleImportClick();
         else if (focusIndex === 1) handleDeleteActive();
-        else if (focusIndex === 2) { playClickSound(); TauriService.openSkinsFolder().catch(() => { }); }
+        else if (focusIndex === 2) handleToggleModel()
+        else if (focusIndex === 3) { playClickSound(); TauriService.openSkinsFolder().catch(() => { }); }
         else if (focusIndex < BACK_BUTTON_INDEX) {
           handleSkinSelect(savedSkins[focusIndex - SKINS_START_INDEX]);
         } else {
@@ -248,6 +242,17 @@ const SkinsView = memo(function SkinsView() {
     e.target.value = '';
     setShowImportModal(false);
     setImportMode(null);
+  };
+
+  const handleToggleModel = () => {
+    playClickSound();
+    const newModel = skinModel === 'alex' ? 'steve' : 'alex';
+    setSkinModel(newModel);
+    if (activeSkinId) {
+      setSavedSkins(prev => prev.map(s =>
+        s.id === activeSkinId ? { ...s, model: newModel as 'steve' | 'alex' } : s
+      ));
+    }
   };
 
   const handleSkinSelect = (skin: SavedSkin) => {
@@ -306,16 +311,26 @@ const SkinsView = memo(function SkinsView() {
             >
               Delete Skin
             </button>
+
+            <button
+              data-index="2"
+              onMouseEnter={() => setFocusIndex(2)}
+              onClick={() => handleToggleModel()}
+              className={`w-40 h-10 flex items-center justify-center transition-colors text-2xl mc-text-shadow outline-none border-none hover:text-[#FFFF55] ${focusIndex === 2 ? 'text-[#FFFF55]' : 'text-white'}`}
+              style={{ backgroundImage: focusIndex === 2 ? "url('/images/button_highlighted.png')" : "url('/images/Button_Background.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}
+            >
+              {skinModel === 'alex' ? 'Alex' : 'Steve'}
+            </button>
           </div>
 
           <div className="flex-1"></div>
           <div className="flex justify-end z-10">
             <button
-              data-index="2"
-              onMouseEnter={() => setFocusIndex(2)}
+              data-index="3"
+              onMouseEnter={() => setFocusIndex(3)}
               onClick={() => { playClickSound(); TauriService.openSkinsFolder().catch(() => { }); }}
               className={`mc-sq-btn w-10 h-10 flex items-center justify-center outline-none border-none transition-all`}
-              style={{ backgroundImage: focusIndex === 2 ? "url('/images/Button_Square_Highlighted.png')" : "url('/images/Button_Square.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}
+              style={{ backgroundImage: focusIndex === 3 ? "url('/images/Button_Square_Highlighted.png')" : "url('/images/Button_Square.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}
             >
               <img src="/images/Folder_Icon.png" alt="Skins Folder" className="w-8 h-8 object-contain pointer-events-none drop-shadow-md" style={{ imageRendering: 'pixelated' }} loading="lazy" decoding="async" />
             </button>

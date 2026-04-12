@@ -2,21 +2,23 @@ import { useState, useEffect, useRef, memo } from "react";
 import { motion } from "framer-motion";
 import { TauriService } from "../../services/TauriService";
 import CustomTUModal from "../modals/CustomTUModal";
+import ImportInstanceModal from "../modals/ImportInstanceModal";
 import { useUI, useConfig, useAudio, useGame } from "../../context/LauncherContext";
 
 const VersionsView = memo(function VersionsView() {
   const { setActiveView } = useUI();
   const { profile: selectedProfile, setProfile: setSelectedProfile } = useConfig();
   const { playClickSound, playBackSound, playSfx } = useAudio();
-  const { editions, installs: installedVersions, toggleInstall, handleUninstall: onUninstall, deleteCustomEdition: onDeleteEdition, addCustomEdition: onAddEdition, updateCustomEdition: onUpdateEdition, downloadingId, updateAvailable } = useGame();
+  const { editions, installs: installedVersions, toggleInstall, handleUninstall: onUninstall, deleteCustomEdition: onDeleteEdition, addCustomEdition: onAddEdition, updateCustomEdition: onUpdateEdition, downloadingId, updateAvailable, importInstance, setTitleImage } = useGame();
 
   const [focusRow, setFocusRow] = useState<number>(0);
   const [focusCol, setFocusCol] = useState<number>(0);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isInstanceModalOpen, setIsInstanceModalOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const ITEM_COUNT = editions.length + 2;
+  const ITEM_COUNT = editions.length + 3;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -37,12 +39,12 @@ const VersionsView = memo(function VersionsView() {
         if (focusRow < editions.length) {
           const edition = editions[focusRow];
           const isInstalled = installedVersions.includes(edition.id);
-          const isCustom = edition.id.startsWith("custom_");
+          const isCustom = edition.id.startsWith("custom_") || edition.id.startsWith("instance_");
           const hasCredits = !isCustom && edition.credits;
 
           let maxCol = 1;
           if (isInstalled) maxCol = 3;
-          if (isCustom) maxCol = isInstalled ? 5 : 3;
+          if (isCustom) maxCol = isInstalled ? 6 : 4;
           if (hasCredits) maxCol = Math.max(maxCol, 0); // credits button is at col -1
 
           setFocusCol((prev) => (prev < maxCol ? prev + 1 : prev));
@@ -50,7 +52,7 @@ const VersionsView = memo(function VersionsView() {
       } else if (e.key === "ArrowLeft") {
         if (focusRow < editions.length) {
           const edition = editions[focusRow];
-          const isCustom = edition.id.startsWith("custom_");
+          const isCustom = edition.id.startsWith("custom_") || edition.id.startsWith("instance_");
           const hasCredits = !isCustom && edition.credits;
 
           if (hasCredits && focusCol > -1) {
@@ -65,7 +67,7 @@ const VersionsView = memo(function VersionsView() {
         if (focusRow < editions.length) {
           const edition = editions[focusRow];
           const isInstalled = installedVersions.includes(edition.id);
-          const isCustom = edition.id.startsWith("custom_");
+          const isCustom = edition.id.startsWith("custom_") || edition.id.startsWith("instance_");
 
           if (focusCol === -1) {
             // Credits button
@@ -98,10 +100,15 @@ const VersionsView = memo(function VersionsView() {
           } else if (focusCol === 4) {
             if (isCustom) {
               playClickSound();
+              setTitleImage(edition.id);
+            }
+          } else if (focusCol === 5) {
+            if (isCustom) {
+              playClickSound();
               setEditingEdition(edition);
               setIsImportModalOpen(true);
             }
-          } else if (focusCol === 5) {
+          } else if (focusCol === 6) {
             if (isCustom) {
               playBackSound();
               onDeleteEdition(edition.id);
@@ -110,6 +117,9 @@ const VersionsView = memo(function VersionsView() {
         } else if (focusRow === editions.length) {
           playClickSound();
           setIsImportModalOpen(true);
+        } else if (focusRow === editions.length + 1) {
+          playClickSound();
+          setIsInstanceModalOpen(true);
         } else {
           playBackSound();
           setActiveView("main");
@@ -156,7 +166,7 @@ const VersionsView = memo(function VersionsView() {
               const isInstalled = installedVersions.includes(edition.id);
               const isSelected = selectedProfile === edition.id;
               const isRowFocused = focusRow === i;
-              const isCustom = edition.id.startsWith("custom_");
+              const isCustom = edition.id.startsWith("custom_") || edition.id.startsWith("instance_");
               const isPlaceholder = false;
 
               return (
@@ -434,13 +444,53 @@ const VersionsView = memo(function VersionsView() {
                             onClick={(e) => {
                               e.stopPropagation();
                               playClickSound();
-                              setEditingEdition(edition);
-                              setIsImportModalOpen(true);
+                              setTitleImage(edition.id);
                             }}
-                            className="mc-sq-btn w-8 h-8 flex items-center justify-center outline-none border-none transition-all"
+                            className="w-8 h-8 flex items-center justify-center outline-none border-none transition-all"
                             style={{
                               backgroundImage:
                                 isRowFocused && focusCol === (isInstalled ? 4 : 2)
+                                  ? "url('/images/Button_Square_Highlighted.png')"
+                                  : "url('/images/Button_Square.png')",
+                              backgroundSize: "100% 100%",
+                              imageRendering: "pixelated",
+                            }}
+                            title="Set title image"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="square"
+                              className="text-white drop-shadow-md"
+                            >
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                              <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                          </button>
+                          <button
+                            data-row={i}
+                            data-col={isInstalled ? 5 : 3}
+                            onMouseEnter={(e) => {
+                              e.stopPropagation();
+                              setFocusRow(i);
+                              setFocusCol(isInstalled ? 5 : 3);
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playClickSound();
+                              setEditingEdition(edition);
+                              setIsImportModalOpen(true);
+                            }}
+                            className="w-8 h-8 flex items-center justify-center outline-none border-none transition-all"
+                            style={{
+                              backgroundImage:
+                                isRowFocused && focusCol === (isInstalled ? 5 : 3)
                                   ? "url('/images/Button_Square_Highlighted.png')"
                                   : "url('/images/Button_Square.png')",
                               backgroundSize: "100% 100%",
@@ -464,11 +514,11 @@ const VersionsView = memo(function VersionsView() {
                           </button>
                           <button
                             data-row={i}
-                            data-col={isInstalled ? 5 : 3}
+                            data-col={isInstalled ? 6 : 4}
                             onMouseEnter={(e) => {
                               e.stopPropagation();
                               setFocusRow(i);
-                              setFocusCol(isInstalled ? 5 : 3);
+                              setFocusCol(isInstalled ? 6 : 4);
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -478,7 +528,7 @@ const VersionsView = memo(function VersionsView() {
                             className="mc-sq-btn w-8 h-8 flex items-center justify-center outline-none border-none transition-all"
                             style={{
                               backgroundImage:
-                                isRowFocused && focusCol === (isInstalled ? 5 : 3)
+                                isRowFocused && focusCol === (isInstalled ? 6 : 4)
                                   ? "url('/images/Button_Square_Highlighted.png')"
                                   : "url('/images/Button_Square.png')",
                               backgroundSize: "100% 100%",
@@ -544,13 +594,37 @@ const VersionsView = memo(function VersionsView() {
             setFocusCol(0);
           }}
           onClick={() => {
-            playBackSound();
-            setActiveView("main");
+            playClickSound();
+            setIsInstanceModalOpen(true);
           }}
           className={`w-72 h-14 flex items-center justify-center transition-colors text-2xl mc-text-shadow outline-none border-none ${focusRow === editions.length + 1 ? "text-[#50C878]" : "text-white"}`}
           style={{
             backgroundImage:
               focusRow === editions.length + 1
+                ? "url('/images/button_highlighted.png')"
+                : "url('/images/Button_Background.png')",
+            backgroundSize: "100% 100%",
+            imageRendering: "pixelated",
+          }}
+        >
+          Import Instance
+        </button>
+
+        <button
+          data-row={editions.length + 2}
+          data-col={0}
+          onMouseEnter={() => {
+            setFocusRow(editions.length + 2);
+            setFocusCol(0);
+          }}
+          onClick={() => {
+            playBackSound();
+            setActiveView("main");
+          }}
+          className={`w-72 h-14 flex items-center justify-center transition-colors text-2xl mc-text-shadow outline-none border-none ${focusRow === editions.length + 2 ? "text-[#50C878]" : "text-white"}`}
+          style={{
+            backgroundImage:
+              focusRow === editions.length + 2
                 ? "url('/images/button_highlighted.png')"
                 : "url('/images/Button_Background.png')",
             backgroundSize: "100% 100%",
@@ -577,6 +651,16 @@ const VersionsView = memo(function VersionsView() {
         }}
         playSfx={playSfx}
         editingEdition={editingEdition}
+      />
+
+      <ImportInstanceModal
+        isOpen={isInstanceModalOpen}
+        onClose={() => setIsInstanceModalOpen(false)}
+        onImport={async (ed) => {
+          const id = await importInstance(ed);
+          if (id) setIsInstanceModalOpen(false);
+        }}
+        playSfx={playSfx}
       />
     </motion.div>
   );

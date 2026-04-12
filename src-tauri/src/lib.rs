@@ -498,11 +498,105 @@ async fn download_runner(app: AppHandle, state: State<'_, DownloadState>, name: 
     Ok(safe_name)
 }
 
+/// Resolve the actual instance directory. If `instance_path.txt` exists
+/// in the stub, use the linked path. Otherwise use the directory itself.
+fn resolve_instance_dir(app: &AppHandle, safe_id: &str) -> PathBuf {
+    let stub = get_app_dir(app).join("instances").join(safe_id);
+    let link_file = stub.join("instance_path.txt");
+    if let Ok(path) = fs::read_to_string(&link_file) {
+        let trimmed = path.trim().to_string();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+    stub
+}
+
 #[tauri::command]
 #[allow(non_snake_case)]
 fn check_game_installed(app: AppHandle, instance_id: String) -> bool {
     let Ok(safe_id) = sanitize_path_component(&instance_id) else { return false };
-    get_app_dir(&app).join("instances").join(&safe_id).join("Minecraft.Client.exe").exists()
+    resolve_instance_dir(&app, &safe_id).join("Minecraft.Client.exe").exists()
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+fn set_instance_title_image(app: AppHandle, instance_id: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose};
+    let safe_id = sanitize_path_component(&instance_id)?;
+    let file = rfd::FileDialog::new()
+        .add_filter("Image", &["png", "jpg", "jpeg", "webp"])
+        .set_title("Select Title Image")
+        .pick_file();
+
+    let src = match file {
+        Some(path) => path,
+        None => return Err("CANCELED".into()),
+    };
+
+    let instances_dir = get_app_dir(&app).join("instances");
+    let stub_dir = instances_dir.join(&safe_id);
+    fs::create_dir_all(&stub_dir).map_err(|e| e.to_string())?;
+
+    let dest = stub_dir.join("title_image.png");
+    fs::copy(&src, &dest).map_err(|e| e.to_string())?;
+
+    let bytes = fs::read(&dest).map_err(|e| e.to_string())?;
+    let b64 = general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:image/png;base64,{}", b64))
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+fn get_instance_title_image(app: AppHandle, instance_id: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose};
+    let safe_id = sanitize_path_component(&instance_id)?;
+    let stub_dir = get_app_dir(&app).join("instances").join(&safe_id);
+    let title_path = stub_dir.join("title_image.png");
+    if title_path.exists() {
+        let bytes = fs::read(&title_path).map_err(|e| e.to_string())?;
+        let b64 = general_purpose::STANDARD.encode(&bytes);
+        Ok(format!("data:image/png;base64,{}", b64))
+    } else {
+        Err("No custom title image".into())
+    }
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+async fn import_instance_folder(app: AppHandle, instance_id: String, url: String) -> Result<String, String> {
+    let safe_id = sanitize_path_component(&instance_id)?;
+    let folder = rfd::FileDialog::new()
+        .set_title("Select Instance Folder")
+        .pick_folder();
+
+    let src = match folder {
+        Some(path) => path,
+        None => return Err("CANCELED".into()),
+    };
+
+    if !src.join("Minecraft.Client.exe").exists() {
+        return Err("Selected folder does not contain Minecraft.Client.exe".into());
+    }
+
+    // Create a stub directory that links to the real location
+    let instances_dir = get_app_dir(&app).join("instances");
+    let stub_dir = instances_dir.join(&safe_id);
+    fs::create_dir_all(&stub_dir).map_err(|e| e.to_string())?;
+
+    // Store the real path
+    let src_str = src.to_string_lossy().to_string();
+    fs::write(stub_dir.join("instance_path.txt"), &src_str).map_err(|e| e.to_string())?;
+
+    // Write version metadata so update check assumes current build is latest
+    if let Some((owner, repo, tag)) = parse_github_release_url(&url) {
+        if let Ok(published_at) = fetch_release_published_at(&owner, &repo, &tag).await {
+            let metadata = serde_json::json!({ "installed_at": published_at });
+            let _ = fs::write(src.join("version_metadata.json"), metadata.to_string());
+        }
+    }
+
+    Ok(safe_id)
 }
 
 #[tauri::command]
@@ -532,10 +626,8 @@ fn open_skins_folder(app: AppHandle) -> Result<(), String> {
 #[allow(non_snake_case)]
 fn open_instance_folder(app: AppHandle, instance_id: String) -> Result<(), String> {
     let safe_id = sanitize_path_component(&instance_id)?;
-    let instances_dir = get_app_dir(&app).join("instances");
-    let dir = instances_dir.join(&safe_id);
+    let dir = resolve_instance_dir(&app, &safe_id);
     if dir.exists() {
-        validate_path_within(&dir, &instances_dir)?;
         let dir_str = dir.to_str().ok_or_else(|| "Invalid directory path".to_string())?;
         let _ = app.opener().open_path(dir_str, None::<&str>);
     }
@@ -663,7 +755,6 @@ async fn setup_macos_runtime(window: tauri::Window, app: AppHandle) -> Result<()
         emit_macos_setup_progress(&window, "extracting", "Extracting runtime…".into(), None);
         
         let archive_metadata = fs::metadata(&archive_path).map_err(|e| format!("Cannot read archive: {}", e))?;
-        println!("Archive size: {} bytes", archive_metadata.len());
         
         if archive_metadata.len() < 100_000_000 {
             return Err(format!("Archive too small: {} bytes", archive_metadata.len()));
@@ -682,7 +773,6 @@ async fn setup_macos_runtime(window: tauri::Window, app: AppHandle) -> Result<()
             .status()
             .map_err(|e| e.to_string())?;
         
-        println!("Tar exit status: {:?}", status);
         
         let _ = fs::remove_file(&archive_path);
         if !status.success() {
@@ -746,20 +836,30 @@ fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool) -> Vec<u8>
         buf.extend_from_slice(&[0, 0, 0, 0]);
     }
 
-    // Build ANIM flags:
-    // Bit 18 (0x40000) = MODERN_WIDE_MODEL
-    // Bit 19 (0x80000) = SLIM_MODEL (Alex/3px arms)
-    let mut anim_flags: u32 = 0x40000; // MODERN_WIDE_MODEL always set
-    if is_alex {
-        anim_flags |= 0x80000; // SLIM_MODEL
-    }
-    let anim_str = format!("0x{:08x}", anim_flags);
+    // ANIM flags for Alex: disable default arms, then BOX adds slim replacements
+    // 0x40000 = MODERN_WIDE_MODEL
+    // 0x800   = RIGHT_ARM_DISABLED
+    // 0x1000  = LEFT_ARM_DISABLED
+    let anim_str = if is_alex { "0x00041800" } else { "0x00040000" };
+
+    // BOX entries for Alex: 3px-wide arms, mirrored left from right (64x32 UV)
+    let boxes: Vec<&str> = if is_alex {
+        vec![
+            "ARM0 -2 -2 -2 3 12 4 40 16 0 0 0",
+            "ARM1 -1 -2 -2 3 12 4 40 16 0 1 0",
+        ]
+    } else {
+        vec![]
+    };
 
     // Version
     w32(&mut buf, 3);
 
     // Property type definitions
-    let prop_types = ["DISPLAYNAME", "GAME_FLAGS", "FREE", "ANIM"];
+    let mut prop_types = vec!["DISPLAYNAME", "GAME_FLAGS", "FREE", "ANIM"];
+    if is_alex {
+        prop_types.push("BOX");
+    }
     w32(&mut buf, prop_types.len() as u32);
     for (i, name) in prop_types.iter().enumerate() {
         w32(&mut buf, i as u32);
@@ -776,13 +876,14 @@ fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool) -> Vec<u8>
     wstr(&mut buf, filename);
 
     // Properties (after all headers, before data)
-    w32(&mut buf, 4);
+    let num_props = 4 + boxes.len() as u32;
+    w32(&mut buf, num_props);
 
     // DISPLAYNAME (index 0)
     w32(&mut buf, 0);
     wstr(&mut buf, display_name);
 
-    // GAME_FLAGS (index 1) — always 0x18 for human skins
+    // GAME_FLAGS (index 1)
     w32(&mut buf, 1);
     wstr(&mut buf, "0x18");
 
@@ -790,9 +891,15 @@ fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool) -> Vec<u8>
     w32(&mut buf, 2);
     wstr(&mut buf, "1");
 
-    // ANIM (index 3) — encodes model type via flags
+    // ANIM (index 3)
     w32(&mut buf, 3);
     wstr(&mut buf, &anim_str);
+
+    // BOX entries for Alex slim arms (index 4)
+    for box_str in &boxes {
+        w32(&mut buf, 4);
+        wstr(&mut buf, box_str);
+    }
 
     // File data
     buf.extend_from_slice(skin_png);
@@ -821,7 +928,7 @@ async fn download_and_install(app: AppHandle, state: State<'_, DownloadState>, u
     let safe_id = sanitize_path_component(&instance_id)?;
 
     let root = get_app_dir(&app);
-    let instance_dir = root.join("instances").join(&safe_id);
+    let instance_dir = resolve_instance_dir(&app, &safe_id);
     let token = CancellationToken::new();
     let child_token = token.clone();
     {
@@ -920,10 +1027,12 @@ async fn download_and_install(app: AppHandle, state: State<'_, DownloadState>, u
     merge_directory(&source_dir, &instance_dir).map_err(|e| format!("Merge failed: {}", e))?;
     let _ = fs::remove_dir_all(&staging_dir);
 
-    // Write version metadata with the current Nightly release timestamp
-    if let Ok(published_at) = fetch_nightly_published_at().await {
-        let metadata = serde_json::json!({ "installed_at": published_at });
-        let _ = fs::write(instance_dir.join("version_metadata.json"), metadata.to_string());
+    // Write version metadata from the release timestamp
+    if let Some((owner, repo, tag)) = parse_github_release_url(&url) {
+        if let Ok(published_at) = fetch_release_published_at(&owner, &repo, &tag).await {
+            let metadata = serde_json::json!({ "installed_at": published_at });
+            let _ = fs::write(instance_dir.join("version_metadata.json"), metadata.to_string());
+        }
     }
 
     Ok("Success".into())
@@ -953,10 +1062,25 @@ fn merge_directory(src: &std::path::Path, dst: &std::path::Path) -> Result<(), S
     Ok(())
 }
 
-async fn fetch_nightly_published_at() -> Result<String, String> {
+/// Parse a GitHub release download URL into (owner, repo, tag).
+/// e.g. "https://github.com/itsRevela/LCE-Revelations/releases/download/Nightly/file.zip"
+///   -> Some(("itsRevela", "LCE-Revelations", "Nightly"))
+fn parse_github_release_url(url: &str) -> Option<(String, String, String)> {
+    let stripped = url.strip_prefix("https://github.com/")?;
+    let parts: Vec<&str> = stripped.splitn(5, '/').collect();
+    if parts.len() >= 5 && parts[2] == "releases" && parts[3] == "download" {
+        let tag = parts[4].split('/').next()?;
+        Some((parts[0].to_string(), parts[1].to_string(), tag.to_string()))
+    } else {
+        None
+    }
+}
+
+async fn fetch_release_published_at(owner: &str, repo: &str, tag: &str) -> Result<String, String> {
     let client = reqwest::Client::new();
+    let api_url = format!("https://api.github.com/repos/{}/{}/releases/tags/{}", owner, repo, tag);
     let response = client
-        .get("https://api.github.com/repos/itsRevela/LCE-Revelations/releases/tags/Nightly")
+        .get(&api_url)
         .header("User-Agent", "Revelations-Launcher")
         .send()
         .await
@@ -976,10 +1100,16 @@ async fn fetch_nightly_published_at() -> Result<String, String> {
 
 #[tauri::command]
 #[allow(non_snake_case)]
-async fn check_for_game_update(app: AppHandle, instance_id: String) -> Result<bool, String> {
+async fn check_for_game_update(app: AppHandle, instance_id: String, url: String) -> Result<bool, String> {
     let safe_id = sanitize_path_component(&instance_id)?;
-    let instance_dir = get_app_dir(&app).join("instances").join(&safe_id);
+    let instance_dir = resolve_instance_dir(&app, &safe_id);
     let metadata_path = instance_dir.join("version_metadata.json");
+
+    // Parse GitHub owner/repo/tag from the download URL
+    let (owner, repo, tag) = match parse_github_release_url(&url) {
+        Some(parsed) => parsed,
+        None => return Ok(false), // Not a GitHub URL, can't check
+    };
 
     let installed_at = if let Ok(content) = fs::read_to_string(&metadata_path) {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
@@ -998,7 +1128,7 @@ async fn check_for_game_update(app: AppHandle, instance_id: String) -> Result<bo
     };
 
     // Fetch remote timestamp (silently return false on failure)
-    let remote_at = match fetch_nightly_published_at().await {
+    let remote_at = match fetch_release_published_at(&owner, &repo, &tag).await {
         Ok(ts) => ts,
         Err(_) => return Ok(false),
     };
@@ -1106,24 +1236,17 @@ fn perform_dlc_sync(app: &AppHandle, instance_dir: &PathBuf) -> Result<(), Strin
                     let dest_path = dlc_dest.join(&name);
                     
                     if !dest_path.exists() {
-                        if let Err(e) = if entry.path().is_dir() {
+                        let _ = if entry.path().is_dir() {
                             copy_dir_all(entry.path(), &dest_path)
                         } else {
                             fs::copy(entry.path(), &dest_path).map(|_| ())
-                        } {
-                            eprintln!("[DLC Sync] Failed to copy {:?} to {:?}: {}", entry.path(), dest_path, e);
-                        } else {
-                            println!("[DLC Sync] Copied to {:?}", dest_path);
-                        }
-                    } else {
-                        println!("[DLC Sync] Skipping {:?}: Already exists in instance", name);
+                        };
                     }
                 }
             }
             Ok(())
         },
         None => {
-            println!("[DLC Sync] Skipping sync: No DLC source found.");
             Ok(())
         }
     }
@@ -1132,8 +1255,7 @@ fn perform_dlc_sync(app: &AppHandle, instance_dir: &PathBuf) -> Result<(), Strin
 #[tauri::command]
 async fn sync_dlc(app: AppHandle, instance_id: String) -> Result<(), String> {
     let safe_id = sanitize_path_component(&instance_id)?;
-    let root = get_app_dir(&app);
-    let instance_dir = root.join("instances").join(&safe_id);
+    let instance_dir = resolve_instance_dir(&app, &safe_id);
     perform_dlc_sync(&app, &instance_dir)
 }
 
@@ -1141,8 +1263,7 @@ async fn sync_dlc(app: AppHandle, instance_id: String) -> Result<(), String> {
 #[allow(non_snake_case)]
 async fn launch_game(app: AppHandle, state: State<'_, GameState>, instance_id: String, servers: Vec<McServer>) -> Result<(), String> {
     let safe_id = sanitize_path_component(&instance_id)?;
-    let root = get_app_dir(&app);
-    let instance_dir = root.join("instances").join(&safe_id);
+    let instance_dir = resolve_instance_dir(&app, &safe_id);
     let config = load_config(app.clone());
     let username = config.username;
     let _ = fs::write(instance_dir.join("username.txt"), &username);
@@ -1358,8 +1479,7 @@ async fn launch_game(app: AppHandle, state: State<'_, GameState>, instance_id: S
 
 #[cfg(unix)]
 fn kill_process_tree(app: &AppHandle, instance_id: &str) {
-    let root = get_app_dir(&app);
-    let instance_dir = root.join("instances").join(instance_id);
+    let instance_dir = resolve_instance_dir(app, instance_id);
     let target = unix_path_to_wine_z_path(&instance_dir.join("Minecraft.Client.exe"));
     let Ok(entries) = fs::read_dir("/proc") else { return };
     for entry in entries.flatten() {
@@ -1446,7 +1566,7 @@ pub fn run() {
         .plugin(tauri_plugin_gamepad::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_drpc::init())
-        .invoke_handler(tauri::generate_handler![setup_macos_runtime, launch_game, stop_game, check_game_installed, save_config, load_config, download_and_install, open_instance_folder, cancel_download, get_available_runners, get_external_palettes, import_theme, download_runner, delete_instance, update_tray_icon, sync_dlc, fetch_skin, check_for_game_update, open_skins_folder, save_skin_file])
+        .invoke_handler(tauri::generate_handler![setup_macos_runtime, launch_game, stop_game, check_game_installed, save_config, load_config, download_and_install, open_instance_folder, cancel_download, get_available_runners, get_external_palettes, import_theme, download_runner, delete_instance, update_tray_icon, sync_dlc, fetch_skin, check_for_game_update, open_skins_folder, save_skin_file, import_instance_folder, set_instance_title_image, get_instance_title_image])
         .setup(|app| {
             let config = load_config(app.handle().clone());
             let visible = config.enable_tray_icon.unwrap_or(true);

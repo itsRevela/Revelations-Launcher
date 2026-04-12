@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, memo } from 'react';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { useConfig } from '../../context/LauncherContext';
+import { useConfig, useSkin } from '../../context/LauncherContext';
 
 interface SkinViewerProps {
   username: string;
@@ -20,6 +20,9 @@ const SkinViewer = memo(function SkinViewer({ username, setUsername, playClickSo
   const containerRef = useRef<HTMLDivElement>(null);
   const [focusIndex, setFocusIndex] = useState(0);
   const { legacyMode } = useConfig();
+  const { skinModel } = useSkin();
+  const skinModelRef = useRef(skinModel);
+  skinModelRef.current = skinModel;
 
   const [showLayers, setShowLayers] = useLocalStorage('lce-show-layers', true);
   const overlaysRef = useRef<THREE.Mesh[]>([]);
@@ -103,15 +106,7 @@ const SkinViewer = memo(function SkinViewer({ username, setUsername, playClickSo
         left: [x + 4 + w, y + 4, 4, 12], back: [x + 8 + w, y + 4, w, 12]
       });
 
-      const isSlim = !isLegacy && (() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return false;
-        ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(42, 48, 1, 1).data;
-        return data[3] === 0;
-      })();
+      const isSlim = !isLegacy && skinModelRef.current === 'alex';
       const armW = isSlim ? 3 : 4;
 
       const headUv = { top: [8, 0, 8, 8], bottom: [16, 0, 8, 8], right: [0, 8, 8, 8], left: [16, 8, 8, 8], front: [8, 8, 8, 8], back: [24, 8, 8, 8] };

@@ -51,18 +51,15 @@ export function useGameManager({ profile, setProfile, customEditions, setCustomE
     const installed = results.filter((id): id is string => id !== null);
     setInstalls(installed);
 
-    // Check for game updates on installed base editions
+    // Check for game updates on installed editions with URLs
     for (const id of installed) {
-      if (!id.startsWith("custom_")) {
-        try {
-          console.log(`[UpdateCheck] Checking ${id}...`);
-          const hasUpdate = await TauriService.checkForGameUpdate(id);
-          console.log(`[UpdateCheck] ${id} hasUpdate=${hasUpdate}`);
-          setUpdateAvailable(prev => ({ ...prev, [id]: hasUpdate }));
-        } catch (err) {
-          console.error(`[UpdateCheck] ${id} failed:`, err);
-          setUpdateAvailable(prev => ({ ...prev, [id]: false }));
-        }
+      const edition = editions.find(e => e.id === id);
+      if (!edition?.url) continue;
+      try {
+        const hasUpdate = await TauriService.checkForGameUpdate(id, edition.url);
+        setUpdateAvailable(prev => ({ ...prev, [id]: hasUpdate }));
+      } catch {
+        setUpdateAvailable(prev => ({ ...prev, [id]: false }));
       }
     }
   }, [editions]);
@@ -151,19 +148,68 @@ export function useGameManager({ profile, setProfile, customEditions, setCustomE
 
   const addCustomEdition = useCallback((edition: { name: string; desc: string; url: string }) => {
     const id = `custom_${Date.now()}`;
-    const newEdition = { ...edition, id, titleImage: "/images/minecraft_title_tucustom.png" };
+    const newEdition = { ...edition, id, titleImage: "/images/MenuTitle.png" };
     setCustomEditions([...customEditions, newEdition]);
     return id;
   }, [customEditions, setCustomEditions]);
 
+  const importInstance = useCallback(async (edition: { name: string; desc: string; url: string }) => {
+    const id = `instance_${Date.now()}`;
+    try {
+      await TauriService.importInstanceFolder(id, edition.url || "");
+      const newEdition = { ...edition, id, titleImage: "/images/MenuTitle.png" };
+      setCustomEditions([...customEditions, newEdition]);
+      await checkInstalls();
+      setProfile(id);
+      return id;
+    } catch (e: any) {
+      if (e === "CANCELED" || (typeof e === 'string' && e.includes("CANCELED"))) return null;
+      setError(typeof e === 'string' ? e : e.message || "Failed to import instance");
+      return null;
+    }
+  }, [customEditions, setCustomEditions, checkInstalls, setProfile]);
+
   const deleteCustomEdition = useCallback((id: string) => {
     setCustomEditions(customEditions.filter((e) => e.id !== id));
     TauriService.deleteInstance(id).catch(console.error);
-  }, [customEditions, setCustomEditions]);
+    if (profile === id) {
+      setProfile(BASE_EDITIONS[0].id);
+    }
+  }, [customEditions, setCustomEditions, profile, setProfile]);
 
   const updateCustomEdition = useCallback((id: string, updated: { name: string; desc: string; url: string }) => {
     setCustomEditions(customEditions.map((e) => e.id === id ? { ...e, ...updated } : e));
   }, [customEditions, setCustomEditions]);
+
+  const setTitleImage = useCallback(async (id: string) => {
+    try {
+      const dataUrl = await TauriService.setInstanceTitleImage(id);
+      setCustomEditions(customEditions.map((e) =>
+        e.id === id ? { ...e, titleImage: dataUrl } : e
+      ));
+    } catch {
+      // canceled or failed
+    }
+  }, [customEditions, setCustomEditions]);
+
+  // Load custom title images on startup
+  useEffect(() => {
+    const loadTitleImages = async () => {
+      for (const edition of customEditions) {
+        try {
+          const dataUrl = await TauriService.getInstanceTitleImage(edition.id);
+          if (edition.titleImage !== dataUrl) {
+            setCustomEditions(prev => prev.map((e) =>
+              e.id === edition.id ? { ...e, titleImage: dataUrl } : e
+            ));
+          }
+        } catch {
+          // no custom title image
+        }
+      }
+    };
+    loadTitleImages();
+  }, []);
 
   return {
     installs,
@@ -185,5 +231,7 @@ export function useGameManager({ profile, setProfile, customEditions, setCustomE
     downloadRunner,
     checkInstalls,
     updateAvailable,
+    importInstance,
+    setTitleImage,
   };
 }

@@ -165,8 +165,20 @@ export class TauriService {
     return invoke('open_skins_folder');
   }
 
-  static async checkForGameUpdate(instanceId: string): Promise<boolean> {
-    return invoke('check_for_game_update', { instanceId });
+  static async setInstanceTitleImage(instanceId: string): Promise<string> {
+    return invoke('set_instance_title_image', { instanceId });
+  }
+
+  static async getInstanceTitleImage(instanceId: string): Promise<string> {
+    return invoke('get_instance_title_image', { instanceId });
+  }
+
+  static async importInstanceFolder(instanceId: string, url: string): Promise<string> {
+    return invoke('import_instance_folder', { instanceId, url });
+  }
+
+  static async checkForGameUpdate(instanceId: string, url: string): Promise<boolean> {
+    return invoke('check_for_game_update', { instanceId, url });
   }
 
   static async fetchSkin(username: string): Promise<[string, string]> {

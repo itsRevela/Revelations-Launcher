@@ -73,7 +73,8 @@ const SettingsView = memo(function SettingsView() {
 
   const handleTrackToggle = () => {
     playClickSound();
-    setCurrentTrack((currentTrack + 1) % tracks.length);
+    // -1 = Randomize, 0..N = specific tracks, then back to -1
+    setCurrentTrack((prev) => prev + 1 >= tracks.length ? -1 : prev + 1);
   };
 
   const handleResetSetup = () => {
@@ -301,7 +302,7 @@ const SettingsView = memo(function SettingsView() {
       });
       items.push({
         id: "track",
-        label: `${trackName} - C418`,
+        label: currentTrack === -1 ? "Randomize" : `${trackName} - C418`,
         type: "button",
         onClick: handleTrackToggle,
       });

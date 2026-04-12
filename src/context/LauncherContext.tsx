@@ -137,18 +137,15 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
         const { listen } = await import("@tauri-apps/api/event");
 
         const unlistenClose = await listen("tauri://close-requested", () => {
-          console.log("Window close requested - hiding music");
-          setIsWindowVisible(false);
+                    setIsWindowVisible(false);
         });
 
         const unlistenShow = await listen("tauri://window-shown", () => {
-          console.log("Window shown - resuming music");
-          setIsWindowVisible(true);
+                    setIsWindowVisible(true);
         });
 
         const unlistenFocus = await listen("tauri://focus", () => {
-          console.log("Window focused - resuming music");
-          setIsWindowVisible(true);
+                    setIsWindowVisible(true);
         });
 
         const unlistenBlur = await listen("tauri://blur", () => {

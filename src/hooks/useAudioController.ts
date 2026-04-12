@@ -29,7 +29,8 @@ interface AudioControllerProps {
 }
 
 export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning, isWindowVisible }: AudioControllerProps) {
-  const [currentTrack, setCurrentTrack] = useState(0);
+  const [currentTrack, setCurrentTrack] = useState(-1); // -1 = randomize mode
+  const [playingTrack, setPlayingTrack] = useState(() => Math.floor(Math.random() * TRACKS.length));
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [splashIndex, setSplashIndex] = useState(-1);
   const musicPausedRef = useRef<{ at: number; track: number } | null>(null);
@@ -106,15 +107,26 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
     if (showIntro) return;
     if (audioElement) return;
 
-    const audio = new Audio(TRACKS[currentTrack]);
+    const audio = new Audio(TRACKS[playingTrack]);
     audio.volume = musicVol / 100;
-    const handleEnded = () => setCurrentTrack((prev) => (prev + 1) % TRACKS.length);
+    const handleEnded = () => {
+      if (currentTrack === -1) {
+        // Randomize: pick a different track
+        setPlayingTrack((prev) => {
+          let next;
+          do { next = Math.floor(Math.random() * TRACKS.length); } while (next === prev && TRACKS.length > 1);
+          return next;
+        });
+      } else {
+        setPlayingTrack((prev) => (prev + 1) % TRACKS.length);
+        setCurrentTrack((prev) => (prev + 1) % TRACKS.length);
+      }
+    };
     audio.addEventListener("ended", handleEnded);
 
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        console.log("Autoplay prevented, waiting for user interaction");
         const startMusic = () => {
           audio.play().catch(() => { });
           document.removeEventListener("click", startMusic);
@@ -130,13 +142,23 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
       audio.removeEventListener("ended", handleEnded);
       audio.pause();
     };
-  }, [showIntro, audioElement, currentTrack, musicVol]);
+  }, [showIntro, audioElement, playingTrack, musicVol]);
+
+  // When user selects a specific track, sync playingTrack
+  useEffect(() => {
+    if (currentTrack >= 0) {
+      setPlayingTrack(currentTrack);
+    } else {
+      // Randomize: pick a new random track
+      setPlayingTrack(Math.floor(Math.random() * TRACKS.length));
+    }
+  }, [currentTrack]);
 
   useEffect(() => {
     if (!audioElement) return;
-    audioElement.src = TRACKS[currentTrack];
+    audioElement.src = TRACKS[playingTrack];
     audioElement.play().catch(() => { });
-  }, [currentTrack]);
+  }, [playingTrack]);
 
   useEffect(() => {
     if (!audioElement) return;
@@ -147,7 +169,7 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
         if (!musicPausedRef.current) {
           musicPausedRef.current = {
             at: audioElement.currentTime,
-            track: currentTrack,
+            track: playingTrack,
           };
         }
         fadeOut(audioElement, 500);
@@ -155,12 +177,12 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
     } else if (musicPausedRef.current) {
       const { at, track } = musicPausedRef.current;
       musicPausedRef.current = null;
-      if (track === currentTrack) {
+      if (track === playingTrack) {
         audioElement.currentTime = at;
       }
       fadeIn(audioElement, musicVol / 100, 500);
     }
-  }, [isGameRunning, isWindowVisible, audioElement, currentTrack, musicVol, fadeOut, fadeIn]);
+  }, [isGameRunning, isWindowVisible, audioElement, playingTrack, musicVol, fadeOut, fadeIn]);
 
   useEffect(() => {
     if (audioElement) {
