@@ -169,10 +169,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create nightly artifacts/* \
-            --title "Revelations Launcher Nightly: ${{ steps.sha.outputs.short }}" \
-            --notes "# Revelations Launcher (Nightly)
-
-          ## What to download?
+            --title "Revelations Launcher: ${{ steps.sha.outputs.short }}" \
+            --notes "## What to download?
 
           ### Linux
           - **RHEL/Fedora**: \`.rpm\`
