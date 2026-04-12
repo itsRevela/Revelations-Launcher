@@ -879,7 +879,12 @@ fn build_skin_pck(skin_png: &[u8], display_name: &str, is_alex: bool) -> Vec<u8>
     // File header 1: skin PNG
     w32(&mut buf, skin_png.len() as u32);
     w32(&mut buf, 0); // type 0 = SkinFile
-    wstr(&mut buf, "dlcskin99990000.png");
+    let skin_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() % 100_000_000;
+    let skin_filename = format!("dlcskin{:08}.png", skin_id);
+    wstr(&mut buf, &skin_filename);
 
     // Properties for file 0 (info): PACKID
     w32(&mut buf, 1); // 1 property
