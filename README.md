@@ -32,7 +32,7 @@ More versions coming in future updates.
 
 ---
 
-### LATEST: v1.1.2
+### LATEST: v1.1.4
 
 - Automatic game update detection with one-click updates (for custom instances, too!)
 - Custom skin support with PCK packing (Steve & Alex models) (Other players can see your skin)
