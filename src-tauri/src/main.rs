@@ -25,10 +25,11 @@ fn main() {
 
             fn check_line(l: &str) -> bool {
                 let low = l.to_lowercase();
-                (low.contains("gbm") && low.contains("buffer")) || 
+                (low.contains("gbm") && low.contains("buffer")) ||
                 (low.contains("dmabuf") && low.contains("renderer")) ||
                 (low.contains("invalid argument") && low.contains("buffer")) ||
-                (low.contains("wayland") && low.contains("protocol error"))
+                (low.contains("wayland") && low.contains("protocol error")) ||
+                (low.contains("egl") && (low.contains("bad_parameter") || low.contains("aborting")))
             }
 
             let h1 = thread::spawn(move || {
@@ -76,6 +77,7 @@ fn main() {
                     .env("REVELATIONS_LAUNCH_STAGE", "2")
                     .env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
                     .env("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+                    .env("LIBGL_ALWAYS_SOFTWARE", "1")
                     .spawn()
                     .expect("failed to spawn fallback child process");
 
