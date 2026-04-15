@@ -14,6 +14,9 @@
 ```sh
 pnpm install  # or npm
 pnpm tauri build  # or npm
+
+# Linux AppImage: use NO_STRIP to preserve symbols required by WebKitGTK/EGL
+NO_STRIP=true pnpm tauri build --bundles appimage
 ```
 
 ## macOS ARM Fix

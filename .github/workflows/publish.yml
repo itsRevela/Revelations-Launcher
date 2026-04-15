@@ -113,6 +113,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NO_STRIP: ${{ matrix.platform == 'ubuntu-22.04' && 'true' || '' }}
         with:
           tagName: v__VERSION__
           releaseName: 'Revelations v__VERSION__'
