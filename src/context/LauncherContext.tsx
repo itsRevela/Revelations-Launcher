@@ -132,24 +132,27 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   useEffect(() => {
+    let ready = false;
+    const readyTimer = setTimeout(() => { ready = true; }, 3000);
+
     const setupVisibilityDetection = async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
 
         const unlistenClose = await listen("tauri://close-requested", () => {
-                    setIsWindowVisible(false);
+          setIsWindowVisible(false);
         });
 
         const unlistenShow = await listen("tauri://window-shown", () => {
-                    setIsWindowVisible(true);
+          setIsWindowVisible(true);
         });
 
         const unlistenFocus = await listen("tauri://focus", () => {
-                    setIsWindowVisible(true);
+          setIsWindowVisible(true);
         });
 
         const unlistenBlur = await listen("tauri://blur", () => {
-          setIsWindowVisible(false);
+          if (ready) setIsWindowVisible(false);
         });
 
         return () => {
@@ -165,6 +168,7 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
     };
 
     setupVisibilityDetection();
+    return () => clearTimeout(readyTimer);
   }, []);
 
   const uiValue = useMemo(() => ({

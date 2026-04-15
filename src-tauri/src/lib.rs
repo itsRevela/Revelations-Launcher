@@ -618,7 +618,10 @@ fn open_skins_folder(app: AppHandle) -> Result<(), String> {
     let skins_dir = get_app_dir(&app).join("skins");
     let _ = fs::create_dir_all(&skins_dir);
     let dir_str = skins_dir.to_str().ok_or_else(|| "Invalid directory path".to_string())?;
-    let _ = app.opener().open_path(dir_str, None::<&str>);
+    if app.opener().open_path(dir_str, None::<&str>).is_err() {
+        #[cfg(target_os = "linux")]
+        { let _ = hidden_command("xdg-open").arg(dir_str).spawn(); }
+    }
     Ok(())
 }
 
@@ -629,7 +632,10 @@ fn open_instance_folder(app: AppHandle, instance_id: String) -> Result<(), Strin
     let dir = resolve_instance_dir(&app, &safe_id);
     if dir.exists() {
         let dir_str = dir.to_str().ok_or_else(|| "Invalid directory path".to_string())?;
-        let _ = app.opener().open_path(dir_str, None::<&str>);
+        if app.opener().open_path(dir_str, None::<&str>).is_err() {
+            #[cfg(target_os = "linux")]
+            { let _ = hidden_command("xdg-open").arg(dir_str).spawn(); }
+        }
     }
     Ok(())
 }

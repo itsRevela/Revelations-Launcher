@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' https://api.github.com https://api.mojang.com https://api.minecraftapi.net https://*.githubusercontent.com https://*.codeberg.org"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://api.github.com https://api.mojang.com https://api.minecraftapi.net https://*.githubusercontent.com https://*.codeberg.org"
     }
   },
   "bundle": {

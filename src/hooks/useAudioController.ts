@@ -124,18 +124,17 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
     };
     audio.addEventListener("ended", handleEnded);
 
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
+    const tryPlay = () => {
+      audio.play().catch((err) => {
+        console.warn("Revelations: audio playback failed:", err.message);
         const startMusic = () => {
-          audio.play().catch(() => { });
-          document.removeEventListener("click", startMusic);
-          document.removeEventListener("keydown", startMusic);
+          audio.play().catch((e) => console.warn("Revelations: audio retry failed:", e.message));
         };
         document.addEventListener("click", startMusic, { once: true });
         document.addEventListener("keydown", startMusic, { once: true });
       });
-    }
+    };
+    tryPlay();
 
     setAudioElement(audio);
     return () => {
@@ -157,7 +156,7 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
   useEffect(() => {
     if (!audioElement) return;
     audioElement.src = TRACKS[playingTrack];
-    audioElement.play().catch(() => { });
+    audioElement.play().catch((e) => console.warn("Revelations: track change play failed:", e.message));
   }, [playingTrack]);
 
   useEffect(() => {
