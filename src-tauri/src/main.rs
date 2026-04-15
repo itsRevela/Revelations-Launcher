@@ -67,7 +67,7 @@ fn main() {
             let status = child.wait().expect("failed to wait on child process");
             let found_error = h1.join().unwrap_or(false) || h2.join().unwrap_or(false);
             let wayland_libs = ["/usr/lib64/libwayland-client.so.0", "/usr/lib/libwayland-client.so.0"];
-            let wayland_path = "";
+            let mut wayland_path = "";
             if let Some(path) = wayland_libs.iter().find(|p| std::path::Path::new(p).exists()) {
                 wayland_path = path;
             }
