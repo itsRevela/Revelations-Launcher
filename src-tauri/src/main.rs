@@ -72,13 +72,31 @@ fn main() {
                 if found_error {
                     println!("Revelations: Automatic recovery triggered for graphics crash/invisible launch.");
                 }
-                
-                let mut retry_child = Command::new(env::current_exe().unwrap())
-                    .env("REVELATIONS_LAUNCH_STAGE", "2")
+
+                let wayland_lib_paths = [
+                    "/usr/lib64/libwayland-client.so.0",
+                    "/usr/lib/libwayland-client.so.0",
+                    "/usr/lib/x86_64-linux-gnu/libwayland-client.so.0",
+                    "/usr/lib/aarch64-linux-gnu/libwayland-client.so.0",
+                ];
+                let wayland_preload = wayland_lib_paths
+                    .iter()
+                    .find(|p| std::path::Path::new(p).exists())
+                    .copied()
+                    .unwrap_or("");
+
+                let mut cmd = Command::new(env::current_exe().unwrap());
+                cmd.env("REVELATIONS_LAUNCH_STAGE", "2")
                     .env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
                     .env("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
-                    .env("LIBGL_ALWAYS_SOFTWARE", "1")
-                    .spawn()
+                    .env("LIBGL_ALWAYS_SOFTWARE", "1");
+
+                if !wayland_preload.is_empty() {
+                    println!("Revelations: Preloading host Wayland library: {}", wayland_preload);
+                    cmd.env("LD_PRELOAD", wayland_preload);
+                }
+
+                let mut retry_child = cmd.spawn()
                     .expect("failed to spawn fallback child process");
 
                 let retry_status = retry_child.wait().expect("failed to wait on fallback child process");
