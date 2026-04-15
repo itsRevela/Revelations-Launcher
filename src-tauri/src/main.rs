@@ -65,8 +65,12 @@ fn main() {
             });
 
             let status = child.wait().expect("failed to wait on child process");
-
             let found_error = h1.join().unwrap_or(false) || h2.join().unwrap_or(false);
+            let wayland_libs = ["/usr/lib64/libwayland-client.so.0", "/usr/lib/libwayland-client.so.0"];
+            let wayland_path = "";
+            if let Some(path) = wayland_libs.iter().find(|p| std::path::Path::new(p).exists()) {
+                wayland_path = path;
+            }
 
             if found_error || !status.success() {
                 if found_error {
@@ -78,6 +82,7 @@ fn main() {
                     .env("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
                     .env("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
                     .env("LIBGL_ALWAYS_SOFTWARE", "1")
+                    .env("LD_PRELOAD", wayland_path)
                     .spawn()
                     .expect("failed to spawn fallback child process");
 
