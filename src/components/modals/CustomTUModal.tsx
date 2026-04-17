@@ -80,7 +80,7 @@ export default function CustomTUModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-[100] flex items-center justify-center backdrop-blur-sm outline-none border-none"
+      className="absolute inset-0 z-[100] flex items-center justify-center outline-none border-none"
     >
       <div
         className="relative w-[450px] p-8 flex flex-col items-center shadow-2xl"

@@ -19,8 +19,10 @@ const VersionsView = memo(function VersionsView() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const ITEM_COUNT = editions.length + 3;
+  const isAnyModalOpen = isImportModalOpen || isInstanceModalOpen;
 
   useEffect(() => {
+    if (isAnyModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === "INPUT") return;
       if (e.key === "Escape" || e.key === "Backspace") {
@@ -129,7 +131,7 @@ const VersionsView = memo(function VersionsView() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editions, focusRow, focusCol, downloadingId, installedVersions, onUninstall, onDeleteEdition, ITEM_COUNT]);
+  }, [editions, focusRow, focusCol, downloadingId, installedVersions, onUninstall, onDeleteEdition, ITEM_COUNT, isAnyModalOpen]);
 
   useEffect(() => {
     const el = containerRef.current?.querySelector(
@@ -147,6 +149,8 @@ const VersionsView = memo(function VersionsView() {
       transition={{ duration: useConfig().animationsEnabled ? 0.3 : 0 }}
       className="flex flex-col items-center w-full max-w-4xl outline-none"
     >
+      {!isAnyModalOpen && (
+      <>
       <h2 className="text-2xl text-white mc-text-shadow mt-2 mb-4 border-b-2 border-[#373737] pb-2 w-[40%] max-w-[200px] text-center tracking-widest uppercase opacity-80 font-bold">
         Versions
       </h2>
@@ -634,6 +638,8 @@ const VersionsView = memo(function VersionsView() {
           Back
         </button>
       </div>
+      </>
+      )}
 
       <CustomTUModal
         isOpen={isImportModalOpen}
