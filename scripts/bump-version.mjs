@@ -23,10 +23,6 @@ const files = [
     path: "src-tauri/Cargo.toml",
     replace: (s) => s.replace(/^version = "[^"]+"/m, `version = "${version}"`),
   },
-  {
-    path: "README.md",
-    replace: (s) => s.replace(/### LATEST: v[\d.]+/, `### LATEST: v${version}`),
-  },
 ];
 
 for (const file of files) {
