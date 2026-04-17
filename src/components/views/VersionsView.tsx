@@ -637,7 +637,7 @@ const VersionsView = memo(function VersionsView() {
             imageRendering: "pixelated",
           }}
         >
-          Import Custom TU
+          Import Fork
         </button>
 
         <button

@@ -91,7 +91,7 @@ export default function CustomTUModal({
         }}
       >
         <h2 className="text-[#FFFF55] text-2xl mc-text-shadow mb-6 border-b-2 border-[#373737] pb-2 w-full text-center uppercase font-bold tracking-widest">
-          {editingEdition ? "Edit Custom TU" : "Import Custom TU"}
+          {editingEdition ? "Edit Fork" : "Import Fork"}
         </h2>
 
         <div className="flex flex-col gap-5 w-full">
