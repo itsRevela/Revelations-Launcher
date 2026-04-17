@@ -12,7 +12,7 @@ export function useAppConfig() {
   const [musicVol, setMusicVol] = useLocalStorage("lce-music", 50);
   const [sfxVol, setSfxVol] = useLocalStorage("lce-sfx", 100);
   const [isDayTime, setIsDayTime] = useLocalStorage("lce-daytime", true);
-  const [profile, setProfile] = useLocalStorage("lce-profile", "legacy_evolved");
+  const [profile, setProfile] = useLocalStorage("lce-profile", "revelations_edition");
   const [legacyMode, setLegacyMode] = useLocalStorage("lce-legacy-mode", false);
   const [keepLauncherOpen, setKeepLauncherOpen] = useLocalStorage("lce-keep-open", false);
   const [enableTrayIcon, setEnableTrayIcon] = useLocalStorage("lce-tray-icon", true);

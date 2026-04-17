@@ -115,6 +115,15 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
   }, [activeView]);
 
   useEffect(() => {
+    if (!configRaw.isLoaded) return;
+    if (gameRaw.editions.length === 0) return;
+    const exists = gameRaw.editions.some((e: any) => e.id === configRaw.profile);
+    if (!exists) {
+      configRaw.setProfile(gameRaw.editions[0].id);
+    }
+  }, [configRaw.isLoaded, gameRaw.editions, configRaw.profile]);
+
+  useEffect(() => {
     if (config.isLoaded && config.profile) {
       TauriService.syncDlc(config.profile).catch(console.error);
     }
