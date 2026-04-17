@@ -32,6 +32,21 @@ More versions coming in future updates.
 
 ---
 
+### LATEST: v1.1.5
+
+- Music advances to the next track when one ends; randomize mode never replays the same track twice in a row
+- Music resumes where it left off after the window regains focus (previously restarted from the beginning)
+- Download button now works on a first launch (previously silently did nothing)
+- Custom title images on imported instances are capped so they can't push the UI off-screen
+- Ability to remove a custom title image and revert to the default
+- Credits buttons in the Versions menu now open in your system browser
+- Renamed "Import Custom TU" to "Import Fork"
+- Import dialogs no longer sit under a blurry overlay
+- Buttons un-highlight when the mouse moves away
+- "Versions" now sits above "Help & Options" in the main menu
+
+---
+
 ### LATEST: v1.1.4
 
 - Automatic game update detection with one-click updates (for custom instances, too!)
