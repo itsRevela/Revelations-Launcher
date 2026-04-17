@@ -36,8 +36,8 @@ const HomeView = memo(function HomeView() {
         isDanger: false,
         isUpdate: true,
       }] : []),
-      { label: "Help & Options", action: () => setActiveView("settings") },
       { label: "Versions", action: () => setActiveView("versions") },
+      { label: "Help & Options", action: () => setActiveView("settings") },
       { label: "Themes & Tools", action: () => setActiveView("themes") },
     ],
     [
