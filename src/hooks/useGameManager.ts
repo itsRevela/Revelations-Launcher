@@ -192,6 +192,17 @@ export function useGameManager({ profile, setProfile, customEditions, setCustomE
     }
   }, [customEditions, setCustomEditions]);
 
+  const removeTitleImage = useCallback(async (id: string) => {
+    try {
+      await TauriService.removeInstanceTitleImage(id);
+      setCustomEditions(customEditions.map((e) =>
+        e.id === id ? { ...e, titleImage: "/images/MenuTitle.png" } : e
+      ));
+    } catch {
+      // failed
+    }
+  }, [customEditions, setCustomEditions]);
+
   // Load custom title images on startup
   useEffect(() => {
     const loadTitleImages = async () => {
@@ -233,5 +244,6 @@ export function useGameManager({ profile, setProfile, customEditions, setCustomE
     updateAvailable,
     importInstance,
     setTitleImage,
+    removeTitleImage,
   };
 }

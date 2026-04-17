@@ -173,6 +173,10 @@ export class TauriService {
     return invoke('get_instance_title_image', { instanceId });
   }
 
+  static async removeInstanceTitleImage(instanceId: string): Promise<void> {
+    return invoke('remove_instance_title_image', { instanceId });
+  }
+
   static async importInstanceFolder(instanceId: string, url: string): Promise<string> {
     return invoke('import_instance_folder', { instanceId, url });
   }

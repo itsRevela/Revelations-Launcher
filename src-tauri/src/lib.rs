@@ -567,6 +567,18 @@ fn set_instance_title_image(app: AppHandle, instance_id: String) -> Result<Strin
 
 #[tauri::command]
 #[allow(non_snake_case)]
+fn remove_instance_title_image(app: AppHandle, instance_id: String) -> Result<(), String> {
+    let safe_id = sanitize_path_component(&instance_id)?;
+    let stub_dir = get_app_dir(&app).join("instances").join(&safe_id);
+    let title_path = stub_dir.join("title_image.png");
+    if title_path.exists() {
+        fs::remove_file(&title_path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
 fn get_instance_title_image(app: AppHandle, instance_id: String) -> Result<String, String> {
     use base64::{Engine as _, engine::general_purpose};
     let safe_id = sanitize_path_component(&instance_id)?;
@@ -1609,7 +1621,7 @@ pub fn run() {
         .plugin(tauri_plugin_gamepad::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_drpc::init())
-        .invoke_handler(tauri::generate_handler![setup_macos_runtime, launch_game, stop_game, check_game_installed, save_config, load_config, download_and_install, open_instance_folder, cancel_download, get_available_runners, get_external_palettes, import_theme, download_runner, delete_instance, update_tray_icon, sync_dlc, fetch_skin, check_for_game_update, open_skins_folder, save_skin_file, import_instance_folder, set_instance_title_image, get_instance_title_image])
+        .invoke_handler(tauri::generate_handler![setup_macos_runtime, launch_game, stop_game, check_game_installed, save_config, load_config, download_and_install, open_instance_folder, cancel_download, get_available_runners, get_external_palettes, import_theme, download_runner, delete_instance, update_tray_icon, sync_dlc, fetch_skin, check_for_game_update, open_skins_folder, save_skin_file, import_instance_folder, set_instance_title_image, get_instance_title_image, remove_instance_title_image])
         .setup(|app| {
             let config = load_config(app.handle().clone());
             let visible = config.enable_tray_icon.unwrap_or(true);
