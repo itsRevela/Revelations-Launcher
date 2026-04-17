@@ -177,7 +177,7 @@ export default function App() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 src={titleImage}
-                className="w-3/4 max-w-3xl"
+                className="max-w-[75%] max-h-[60vh] w-auto h-auto object-contain"
                 style={{ imageRendering: "pixelated" }}
               />
             </motion.div>
@@ -259,8 +259,8 @@ export default function App() {
                       stiffness: 300,
                       damping: 25,
                     }}
-                    className="w-full drop-shadow-[0_8px_6px_rgba(0,0,0,0.8)] pointer-events-none"
-                    style={{ imageRendering: "pixelated" }}
+                    className="drop-shadow-[0_8px_6px_rgba(0,0,0,0.8)] pointer-events-none object-contain"
+                    style={{ imageRendering: "pixelated", maxWidth: "100%", maxHeight: 140, width: "auto", height: "auto" }}
                   />
                   <AnimatePresence>
                     {logoAnimDone && (

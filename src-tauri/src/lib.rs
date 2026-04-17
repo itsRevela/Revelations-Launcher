@@ -523,6 +523,9 @@ fn check_game_installed(app: AppHandle, instance_id: String) -> bool {
 #[allow(non_snake_case)]
 fn set_instance_title_image(app: AppHandle, instance_id: String) -> Result<String, String> {
     use base64::{Engine as _, engine::general_purpose};
+    use std::io::Cursor;
+    const MAX_HEIGHT: u32 = 622;
+
     let safe_id = sanitize_path_component(&instance_id)?;
     let file = rfd::FileDialog::new()
         .add_filter("Image", &["png", "jpg", "jpeg", "webp"])
@@ -538,11 +541,27 @@ fn set_instance_title_image(app: AppHandle, instance_id: String) -> Result<Strin
     let stub_dir = instances_dir.join(&safe_id);
     fs::create_dir_all(&stub_dir).map_err(|e| e.to_string())?;
 
-    let dest = stub_dir.join("title_image.png");
-    fs::copy(&src, &dest).map_err(|e| e.to_string())?;
+    let src_bytes = fs::read(&src).map_err(|e| e.to_string())?;
+    let img = image::load_from_memory(&src_bytes)
+        .map_err(|e| format!("Failed to decode image: {}", e))?;
 
-    let bytes = fs::read(&dest).map_err(|e| e.to_string())?;
-    let b64 = general_purpose::STANDARD.encode(&bytes);
+    let (w, h) = (img.width(), img.height());
+    let resized = if h > MAX_HEIGHT {
+        let new_w = (((w as u64) * (MAX_HEIGHT as u64)) / (h as u64)).max(1) as u32;
+        img.resize_exact(new_w, MAX_HEIGHT, image::imageops::FilterType::Lanczos3)
+    } else {
+        img
+    };
+
+    let mut out_bytes: Vec<u8> = Vec::new();
+    resized
+        .write_to(&mut Cursor::new(&mut out_bytes), image::ImageFormat::Png)
+        .map_err(|e| format!("Failed to encode image: {}", e))?;
+
+    let dest = stub_dir.join("title_image.png");
+    fs::write(&dest, &out_bytes).map_err(|e| e.to_string())?;
+
+    let b64 = general_purpose::STANDARD.encode(&out_bytes);
     Ok(format!("data:image/png;base64,{}", b64))
 }
 
