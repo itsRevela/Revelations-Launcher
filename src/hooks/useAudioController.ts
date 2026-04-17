@@ -109,20 +109,6 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
 
     const audio = new Audio(TRACKS[playingTrack]);
     audio.volume = musicVol / 100;
-    const handleEnded = () => {
-      if (currentTrack === -1) {
-        // Randomize: pick a different track
-        setPlayingTrack((prev) => {
-          let next;
-          do { next = Math.floor(Math.random() * TRACKS.length); } while (next === prev && TRACKS.length > 1);
-          return next;
-        });
-      } else {
-        setPlayingTrack((prev) => (prev + 1) % TRACKS.length);
-        setCurrentTrack((prev) => (prev + 1) % TRACKS.length);
-      }
-    };
-    audio.addEventListener("ended", handleEnded);
 
     const tryPlay = () => {
       audio.play().catch((err) => {
@@ -137,19 +123,41 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
     tryPlay();
 
     setAudioElement(audio);
-    return () => {
-      audio.removeEventListener("ended", handleEnded);
-      audio.pause();
+  }, [showIntro]);
+
+  // Attach/re-attach `ended` listener when audio or currentTrack changes, so the
+  // handler always reads the latest randomize-vs-specific mode.
+  useEffect(() => {
+    if (!audioElement) return;
+    const handleEnded = () => {
+      if (currentTrack === -1) {
+        setPlayingTrack((prev) => {
+          if (TRACKS.length <= 1) return prev;
+          let next;
+          do { next = Math.floor(Math.random() * TRACKS.length); } while (next === prev);
+          return next;
+        });
+      } else {
+        setPlayingTrack((prev) => (prev + 1) % TRACKS.length);
+        setCurrentTrack((prev) => (prev + 1) % TRACKS.length);
+      }
     };
-  }, [showIntro, audioElement, playingTrack, musicVol]);
+    audioElement.addEventListener("ended", handleEnded);
+    return () => audioElement.removeEventListener("ended", handleEnded);
+  }, [audioElement, currentTrack]);
 
   // When user selects a specific track, sync playingTrack
   useEffect(() => {
     if (currentTrack >= 0) {
       setPlayingTrack(currentTrack);
     } else {
-      // Randomize: pick a new random track
-      setPlayingTrack(Math.floor(Math.random() * TRACKS.length));
+      // Randomize: pick a new random track, avoiding the current one
+      setPlayingTrack((prev) => {
+        if (TRACKS.length <= 1) return prev;
+        let next;
+        do { next = Math.floor(Math.random() * TRACKS.length); } while (next === prev);
+        return next;
+      });
     }
   }, [currentTrack]);
 
