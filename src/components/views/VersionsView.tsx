@@ -73,7 +73,7 @@ const VersionsView = memo(function VersionsView() {
             // Credits button
             if (edition.credits) {
               playClickSound();
-              window.open(edition.credits.url, '_blank');
+              TauriService.openUrl(edition.credits.url);
             }
           } else if (focusCol === 1) {
             if (!downloadingId) {
@@ -266,7 +266,7 @@ const VersionsView = memo(function VersionsView() {
                           onClick={(e) => {
                             e.stopPropagation();
                             playClickSound();
-                            window.open(edition.credits.url, '_blank');
+                            TauriService.openUrl(edition.credits.url);
                           }}
                           className={`mc-sq-btn w-8 h-8 flex items-center justify-center outline-none border-none transition-all`}
                           style={{
