@@ -35,7 +35,7 @@ More versions coming in future updates.
 ### LATEST: v1.1.5
 
 - Music advances to the next track when one ends; randomize mode never replays the same track twice in a row
-- Music resumes where it left off after the window regains focus (previously restarted from the beginning)
+- Music no longer restarts from the beginning when the window regains focus, and fades smoothly in and out
 - Download button now works on a first launch (previously silently did nothing)
 - Custom title images on imported instances are capped so they can't push the UI off-screen
 - Ability to remove a custom title image and revert to the default
