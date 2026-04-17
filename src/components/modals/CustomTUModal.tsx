@@ -151,6 +151,7 @@ export default function CustomTUModal({
         <div className="flex gap-4 mt-8 w-full">
           <button
             onMouseEnter={() => setFocusIndex(3)}
+            onMouseLeave={() => setFocusIndex(-1)}
             onClick={() => {
               playSfx("close_click.wav");
               onClose();
@@ -166,6 +167,7 @@ export default function CustomTUModal({
           </button>
           <button
             onMouseEnter={() => setFocusIndex(4)}
+            onMouseLeave={() => setFocusIndex(-1)}
             onClick={() => {
               playSfx("save_click.wav");
               handleImport();

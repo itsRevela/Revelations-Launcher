@@ -66,7 +66,7 @@ const VersionsView = memo(function VersionsView() {
           setFocusCol((prev) => (prev > 0 ? prev - 1 : prev));
         }
       } else if (e.key === "Enter") {
-        if (focusRow < editions.length) {
+        if (focusRow >= 0 && focusRow < editions.length) {
           const edition = editions[focusRow];
           const isInstalled = installedVersions.includes(edition.id);
           const isCustom = edition.id.startsWith("custom_") || edition.id.startsWith("instance_");
@@ -192,6 +192,10 @@ const VersionsView = memo(function VersionsView() {
                       setFocusCol(0);
                     }
                   }}
+                  onMouseLeave={() => {
+                    setFocusRow(-1);
+                    setFocusCol(-1);
+                  }}
                   onClick={() => {
                     if (!isPlaceholder && isInstalled) {
                       playClickSound();
@@ -273,6 +277,7 @@ const VersionsView = memo(function VersionsView() {
                             setFocusRow(i);
                             setFocusCol(-1);
                           }}
+                          onMouseLeave={() => setFocusCol(0)}
                           onClick={(e) => {
                             e.stopPropagation();
                             playClickSound();
@@ -328,6 +333,7 @@ const VersionsView = memo(function VersionsView() {
                             setFocusRow(i);
                             setFocusCol(1);
                           }}
+                          onMouseLeave={() => setFocusCol(0)}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (!downloadingId) {
@@ -375,6 +381,7 @@ const VersionsView = memo(function VersionsView() {
                               setFocusRow(i);
                               setFocusCol(2);
                             }}
+                            onMouseLeave={() => setFocusCol(0)}
                             onClick={(e) => {
                               e.stopPropagation();
                               playClickSound();
@@ -407,6 +414,7 @@ const VersionsView = memo(function VersionsView() {
                               setFocusRow(i);
                               setFocusCol(3);
                             }}
+                            onMouseLeave={() => setFocusCol(0)}
                             onClick={(e) => {
                               e.stopPropagation();
                               playBackSound();
@@ -454,6 +462,7 @@ const VersionsView = memo(function VersionsView() {
                               setFocusRow(i);
                               setFocusCol(isInstalled ? 4 : 2);
                             }}
+                            onMouseLeave={() => setFocusCol(0)}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (hasCustomImage) {
@@ -520,6 +529,7 @@ const VersionsView = memo(function VersionsView() {
                               setFocusRow(i);
                               setFocusCol(isInstalled ? 5 : 3);
                             }}
+                            onMouseLeave={() => setFocusCol(0)}
                             onClick={(e) => {
                               e.stopPropagation();
                               playClickSound();
@@ -559,6 +569,7 @@ const VersionsView = memo(function VersionsView() {
                               setFocusRow(i);
                               setFocusCol(isInstalled ? 6 : 4);
                             }}
+                            onMouseLeave={() => setFocusCol(0)}
                             onClick={(e) => {
                               e.stopPropagation();
                               playBackSound();
@@ -608,6 +619,10 @@ const VersionsView = memo(function VersionsView() {
             setFocusRow(editions.length);
             setFocusCol(0);
           }}
+          onMouseLeave={() => {
+            setFocusRow(-1);
+            setFocusCol(-1);
+          }}
           onClick={() => {
             playClickSound();
             setIsImportModalOpen(true);
@@ -632,6 +647,10 @@ const VersionsView = memo(function VersionsView() {
             setFocusRow(editions.length + 1);
             setFocusCol(0);
           }}
+          onMouseLeave={() => {
+            setFocusRow(-1);
+            setFocusCol(-1);
+          }}
           onClick={() => {
             playClickSound();
             setIsInstanceModalOpen(true);
@@ -655,6 +674,10 @@ const VersionsView = memo(function VersionsView() {
           onMouseEnter={() => {
             setFocusRow(editions.length + 2);
             setFocusCol(0);
+          }}
+          onMouseLeave={() => {
+            setFocusRow(-1);
+            setFocusCol(-1);
           }}
           onClick={() => {
             playBackSound();

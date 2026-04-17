@@ -142,6 +142,7 @@ export default function ImportInstanceModal({
         <div className="flex flex-col gap-3 mt-8 w-full items-center">
           <button
             onMouseEnter={() => setFocusIndex(3)}
+            onMouseLeave={() => setFocusIndex(-1)}
             onClick={handleImport}
             className={`w-full h-12 flex items-center justify-center text-xl mc-text-shadow transition-all outline-none border-none bg-transparent ${focusIndex === 3 ? "text-[#FFFF55]" : "text-white"}`}
             style={{
@@ -156,6 +157,7 @@ export default function ImportInstanceModal({
           <div className="flex gap-4 w-full">
             <button
               onMouseEnter={() => setFocusIndex(4)}
+              onMouseLeave={() => setFocusIndex(-1)}
               onClick={() => {
                 playSfx("close_click.wav");
                 onClose();

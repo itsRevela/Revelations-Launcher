@@ -291,6 +291,7 @@ const SkinsView = memo(function SkinsView() {
             <button
               data-index="0"
               onMouseEnter={() => setFocusIndex(0)}
+              onMouseLeave={() => setFocusIndex(null)}
               onClick={handleImportClick}
               className={`w-40 h-10 flex items-center justify-center transition-colors text-2xl mc-text-shadow outline-none border-none hover:text-[#FFFF55] ${focusIndex === 0 ? 'text-[#FFFF55]' : 'text-white'}`}
               style={{ backgroundImage: focusIndex === 0 ? "url('/images/button_highlighted.png')" : "url('/images/Button_Background.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}
@@ -301,6 +302,7 @@ const SkinsView = memo(function SkinsView() {
             <button
               data-index="1"
               onMouseEnter={() => !isActiveDefault && setFocusIndex(1)}
+              onMouseLeave={() => setFocusIndex(null)}
               onClick={handleDeleteActive}
               className={`w-40 h-10 flex items-center justify-center transition-colors text-2xl mc-text-shadow outline-none border-none ${isActiveDefault ? 'text-gray-400 opacity-80 cursor-not-allowed' : (focusIndex === 1 ? 'text-[#FFFF55]' : 'text-white')}`}
               style={{
@@ -315,6 +317,7 @@ const SkinsView = memo(function SkinsView() {
             <button
               data-index="2"
               onMouseEnter={() => setFocusIndex(2)}
+              onMouseLeave={() => setFocusIndex(null)}
               onClick={() => handleToggleModel()}
               className={`w-40 h-10 flex items-center justify-center transition-colors text-2xl mc-text-shadow outline-none border-none hover:text-[#FFFF55] ${focusIndex === 2 ? 'text-[#FFFF55]' : 'text-white'}`}
               style={{ backgroundImage: focusIndex === 2 ? "url('/images/button_highlighted.png')" : "url('/images/Button_Background.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}
@@ -328,6 +331,7 @@ const SkinsView = memo(function SkinsView() {
             <button
               data-index="3"
               onMouseEnter={() => setFocusIndex(3)}
+              onMouseLeave={() => setFocusIndex(null)}
               onClick={() => { playClickSound(); TauriService.openSkinsFolder().catch(() => { }); }}
               className={`mc-sq-btn w-10 h-10 flex items-center justify-center outline-none border-none transition-all`}
               style={{ backgroundImage: focusIndex === 3 ? "url('/images/Button_Square_Highlighted.png')" : "url('/images/Button_Square.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}
@@ -345,7 +349,7 @@ const SkinsView = memo(function SkinsView() {
             const isActive = activeSkinId ? activeSkinId === skin.id : skinUrl === skin.url;
             const isFocused = focusIndex === idx;
             return (
-              <div key={skin.id} data-index={idx} tabIndex={0} onMouseEnter={() => setFocusIndex(idx)} className="flex flex-col items-center gap-1 w-32 outline-none">
+              <div key={skin.id} data-index={idx} tabIndex={0} onMouseEnter={() => setFocusIndex(idx)} onMouseLeave={() => setFocusIndex(null)} className="flex flex-col items-center gap-1 w-32 outline-none">
                 <div className="h-4">
                   {isActive && <span className="text-[#FFFF55] text-xs mc-text-shadow uppercase tracking-widest">Active</span>}
                 </div>
@@ -371,6 +375,7 @@ const SkinsView = memo(function SkinsView() {
       <button
         data-index={BACK_BUTTON_INDEX}
         onMouseEnter={() => setFocusIndex(BACK_BUTTON_INDEX)}
+        onMouseLeave={() => setFocusIndex(null)}
         onClick={() => { playBackSound(); setActiveView('main'); }}
         className={`w-72 h-14 flex items-center justify-center transition-colors text-2xl mc-text-shadow mt-2 outline-none border-none hover:text-[#FFFF55] ${focusIndex === BACK_BUTTON_INDEX ? 'text-[#FFFF55]' : 'text-white'}`}
         style={{ backgroundImage: focusIndex === BACK_BUTTON_INDEX ? "url('/images/button_highlighted.png')" : "url('/images/Button_Background.png')", backgroundSize: '100% 100%', imageRendering: 'pixelated' }}

@@ -550,6 +550,7 @@ const SettingsView = memo(function SettingsView() {
                 data-index={index}
                 tabIndex={0}
                 onMouseEnter={() => setFocusIndex(index)}
+                onMouseLeave={() => setFocusIndex(null)}
                 className="relative w-[360px] h-10 flex items-center justify-center cursor-pointer transition-all outline-none border-none hover:text-[#FFFF55] shrink-0"
                 style={getSliderStyle(index)}
               >
@@ -582,6 +583,7 @@ const SettingsView = memo(function SettingsView() {
               key={item.id}
               data-index={index}
               onMouseEnter={() => setFocusIndex(index)}
+              onMouseLeave={() => setFocusIndex(null)}
               onClick={item.onClick}
               className={`w-[360px] h-10 flex items-center justify-center px-4 relative z-30 transition-colors outline-none border-none shrink-0 ${isRed
                 ? focusIndex === index
@@ -612,6 +614,7 @@ const SettingsView = memo(function SettingsView() {
           <button
             data-index={backIndex}
             onMouseEnter={() => setFocusIndex(backIndex)}
+            onMouseLeave={() => setFocusIndex(null)}
             onClick={backItem.onClick}
             className={`w-72 h-10 flex items-center justify-center transition-colors text-xl mc-text-shadow outline-none border-none hover:text-[#FFFF55] ${focusIndex === backIndex ? "text-[#FFFF55]" : "text-white"
               }`}

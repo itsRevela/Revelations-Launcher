@@ -111,6 +111,7 @@ const ThemesView = memo(function ThemesView() {
         <button
           data-index="0"
           onMouseEnter={() => setFocusIndex(0)}
+          onMouseLeave={() => setFocusIndex(null)}
           onClick={() => {
             playClickSound();
             const currentIndex = totalPalettes.indexOf(currentTheme);
@@ -128,6 +129,7 @@ const ThemesView = memo(function ThemesView() {
         <button
           data-index="1"
           onMouseEnter={() => setFocusIndex(1)}
+          onMouseLeave={() => setFocusIndex(null)}
           onClick={handleImport}
           className={`w-72 h-12 flex items-center justify-center px-4 relative transition-colors outline-none border-none hover:text-[#FFFF55] ${focusIndex === 1 ? "text-[#FFFF55]" : "text-white"}`}
           style={getItemStyle(1)}
@@ -141,6 +143,7 @@ const ThemesView = memo(function ThemesView() {
       <button
         data-index="2"
         onMouseEnter={() => setFocusIndex(2)}
+        onMouseLeave={() => setFocusIndex(null)}
         onClick={() => {
           playBackSound();
           setActiveView("main");
