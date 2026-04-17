@@ -177,7 +177,13 @@ export function useAudioController({ musicVol, sfxVol, showIntro, isGameRunning,
       const { at, track } = musicPausedRef.current;
       musicPausedRef.current = null;
       if (track === playingTrack) {
-        audioElement.currentTime = at;
+        const restoreAt = () => {
+          if (Math.abs(audioElement.currentTime - at) > 0.3) {
+            try { audioElement.currentTime = at; } catch { }
+          }
+        };
+        audioElement.addEventListener("playing", restoreAt, { once: true });
+        try { audioElement.currentTime = at; } catch { }
       }
       fadeIn(audioElement, musicVol / 100, 500);
     }
