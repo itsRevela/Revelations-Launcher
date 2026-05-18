@@ -32,6 +32,12 @@ More versions coming in future updates.
 
 ---
 
+### LATEST: v1.1.6
+
+- Added support for Gitea-hosted game releases and update detection
+
+---
+
 ### LATEST: v1.1.5
 
 - Music advances to the next track when one ends; randomize mode never replays the same track twice in a row
