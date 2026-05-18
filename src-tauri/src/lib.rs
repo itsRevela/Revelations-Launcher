@@ -620,8 +620,8 @@ async fn import_instance_folder(app: AppHandle, instance_id: String, url: String
     fs::write(stub_dir.join("instance_path.txt"), &src_str).map_err(|e| e.to_string())?;
 
     // Write version metadata so update check assumes current build is latest
-    if let Some((owner, repo, tag)) = parse_github_release_url(&url) {
-        if let Ok(published_at) = fetch_release_published_at(&owner, &repo, &tag).await {
+    if let Some((host, owner, repo, tag)) = parse_release_url(&url) {
+        if let Ok(published_at) = fetch_release_published_at(&host, &owner, &repo, &tag).await {
             let metadata = serde_json::json!({ "installed_at": published_at });
             let _ = fs::write(src.join("version_metadata.json"), metadata.to_string());
         }
@@ -1082,8 +1082,8 @@ async fn download_and_install(app: AppHandle, state: State<'_, DownloadState>, u
     let _ = fs::remove_dir_all(&staging_dir);
 
     // Write version metadata from the release timestamp
-    if let Some((owner, repo, tag)) = parse_github_release_url(&url) {
-        if let Ok(published_at) = fetch_release_published_at(&owner, &repo, &tag).await {
+    if let Some((host, owner, repo, tag)) = parse_release_url(&url) {
+        if let Ok(published_at) = fetch_release_published_at(&host, &owner, &repo, &tag).await {
             let metadata = serde_json::json!({ "installed_at": published_at });
             let _ = fs::write(instance_dir.join("version_metadata.json"), metadata.to_string());
         }
@@ -1116,23 +1116,77 @@ fn merge_directory(src: &std::path::Path, dst: &std::path::Path) -> Result<(), S
     Ok(())
 }
 
-/// Parse a GitHub release download URL into (owner, repo, tag).
+#[derive(Debug)]
+enum ReleaseHost {
+    GitHub,
+    Gitea { base: &'static str },
+}
+
+impl ReleaseHost {
+    fn api_url(&self, owner: &str, repo: &str, tag: &str) -> String {
+        match self {
+            ReleaseHost::GitHub => format!(
+                "https://api.github.com/repos/{}/{}/releases/tags/{}",
+                owner, repo, tag
+            ),
+            ReleaseHost::Gitea { base } => format!(
+                "{}/api/v1/repos/{}/{}/releases/tags/{}",
+                base, owner, repo, tag
+            ),
+        }
+    }
+
+    fn label(&self) -> &'static str {
+        match self {
+            ReleaseHost::GitHub => "GitHub",
+            ReleaseHost::Gitea { .. } => "Gitea",
+        }
+    }
+}
+
+/// Parse a release download URL into (host, owner, repo, tag).
+/// Supports GitHub and Gitea-hosted releases that share the
+/// "{owner}/{repo}/releases/download/{tag}/{file}" path layout.
 /// e.g. "https://github.com/itsRevela/LCE-Revelations/releases/download/Nightly/file.zip"
-///   -> Some(("itsRevela", "LCE-Revelations", "Nightly"))
-fn parse_github_release_url(url: &str) -> Option<(String, String, String)> {
-    let stripped = url.strip_prefix("https://github.com/")?;
+///   -> Some((GitHub, "itsRevela", "LCE-Revelations", "Nightly"))
+/// e.g. "https://git.revela.dev/itsRevela/LCE-Revelations/releases/download/Nightly/file.zip"
+///   -> Some((Gitea, "itsRevela", "LCE-Revelations", "Nightly"))
+fn parse_release_url(url: &str) -> Option<(ReleaseHost, String, String, String)> {
+    let (host, stripped) = if let Some(rest) = url.strip_prefix("https://github.com/") {
+        (ReleaseHost::GitHub, rest)
+    } else if let Some(rest) = url.strip_prefix("https://git.revela.dev/") {
+        (
+            ReleaseHost::Gitea {
+                base: "https://git.revela.dev",
+            },
+            rest,
+        )
+    } else {
+        return None;
+    };
+
     let parts: Vec<&str> = stripped.splitn(5, '/').collect();
     if parts.len() >= 5 && parts[2] == "releases" && parts[3] == "download" {
         let tag = parts[4].split('/').next()?;
-        Some((parts[0].to_string(), parts[1].to_string(), tag.to_string()))
+        Some((
+            host,
+            parts[0].to_string(),
+            parts[1].to_string(),
+            tag.to_string(),
+        ))
     } else {
         None
     }
 }
 
-async fn fetch_release_published_at(owner: &str, repo: &str, tag: &str) -> Result<String, String> {
+async fn fetch_release_published_at(
+    host: &ReleaseHost,
+    owner: &str,
+    repo: &str,
+    tag: &str,
+) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let api_url = format!("https://api.github.com/repos/{}/{}/releases/tags/{}", owner, repo, tag);
+    let api_url = host.api_url(owner, repo, tag);
     let response = client
         .get(&api_url)
         .header("User-Agent", "Revelations-Launcher")
@@ -1141,7 +1195,7 @@ async fn fetch_release_published_at(owner: &str, repo: &str, tag: &str) -> Resul
         .map_err(|e| e.to_string())?;
 
     if !response.status().is_success() {
-        return Err(format!("GitHub API returned {}", response.status()));
+        return Err(format!("{} API returned {}", host.label(), response.status()));
     }
 
     let body = response.text().await.map_err(|e| e.to_string())?;
@@ -1159,10 +1213,10 @@ async fn check_for_game_update(app: AppHandle, instance_id: String, url: String)
     let instance_dir = resolve_instance_dir(&app, &safe_id);
     let metadata_path = instance_dir.join("version_metadata.json");
 
-    // Parse GitHub owner/repo/tag from the download URL
-    let (owner, repo, tag) = match parse_github_release_url(&url) {
+    // Parse host/owner/repo/tag from the download URL (GitHub or Gitea)
+    let (host, owner, repo, tag) = match parse_release_url(&url) {
         Some(parsed) => parsed,
-        None => return Ok(false), // Not a GitHub URL, can't check
+        None => return Ok(false), // Unsupported host, can't check
     };
 
     let installed_at = if let Ok(content) = fs::read_to_string(&metadata_path) {
@@ -1182,7 +1236,7 @@ async fn check_for_game_update(app: AppHandle, instance_id: String, url: String)
     };
 
     // Fetch remote timestamp (silently return false on failure)
-    let remote_at = match fetch_release_published_at(&owner, &repo, &tag).await {
+    let remote_at = match fetch_release_published_at(&host, &owner, &repo, &tag).await {
         Ok(ts) => ts,
         Err(_) => return Ok(false),
     };

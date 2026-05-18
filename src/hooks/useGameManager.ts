@@ -9,7 +9,7 @@ const BASE_EDITIONS = [
     id: "revelations_edition",
     name: "LCE Revelations",
     desc: "Legacy Console Edition Revelations. Bundled with a fully-implemented hardcore mode, performance/stability optimizations, and uncapped FPS via a VSync toggle. Security-hardened with token-based encryption.",
-    url: "https://github.com/itsRevela/LCE-Revelations/releases/download/Nightly/LCE-Revelations-Client-Win64.zip",
+    url: "https://git.revela.dev/itsRevela/LCE-Revelations/releases/download/Nightly/LCE-Revelations-Client-Win64.zip",
     titleImage: "/images/minecraft_title_revelations.png",
     credits: {
       developer: "itsRevela",
